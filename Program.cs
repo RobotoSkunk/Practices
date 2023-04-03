@@ -1,5 +1,4 @@
-﻿// using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 
 public struct Vector2 {
@@ -14,7 +13,13 @@ public struct Vector2 {
 	override public string ToString() {
 		return "(" + x.ToString("0.00") + ", " + y.ToString("0.00") + ")";
 	}
+
+	public static float Distance(Vector2 p1, Vector2 p2) {
+		return (float)System.Math.Sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+	}
 }
+
+
 
 public class KDNode {
 	public KDNode? left;
@@ -37,6 +42,7 @@ public class KDNode {
 		this.parent = parent;
 	}
 
+
 	public void Insert(Vector2 position) {
 		bool condition = depth ? position.x < this.position.x : position.y < this.position.y;
 
@@ -55,36 +61,40 @@ public class KDNode {
 		}
 	}
 
-
 	public KDNode? FindMinMaxScalar(float point) {
 		if (point >= position.x && point <= position.y) {
 			return this;
 		}
 
-		// if (left != null) {
-		// 	if (point >= left.position.x && point <= left.position.y) {
+		// if (left != null && right != null) {
+		// 	if (point >= left.position.x && point <= left.position.y ||
+		// 		point >= right.position.x && point <= right.position.y) {
 		// 		return this;
 		// 	}
 		// }
 
-		// if (right != null) {
-		// 	if (point >= right.position.x && point <= right.position.y) {
-		// 		return this;
-		// 	}
-		// }
+		bool condition = depth ? point < position.x : point < position.y;
 
-		if (depth) {
-			if (point < position.x && left != null) {
-				return left.FindMinMaxScalar(point);
-			} else if (right != null) {
-				return right.FindMinMaxScalar(point);
-			}
-		} else {
-			if (point < position.y && left != null) {
-				return left.FindMinMaxScalar(point);
-			} else if (right != null) {
-				return right.FindMinMaxScalar(point);
-			}
+
+		if (condition && left != null) {
+			return left.FindMinMaxScalar(point);
+		} else if (right != null) {
+			return right.FindMinMaxScalar(point);
+		}
+
+		return null;
+	}
+	public KDNode? FindNode(Vector2 position) {
+		if (this.position.x == position.x && this.position.y == position.y) {
+			return this;
+		}
+		bool condition = depth ? position.x < this.position.x : position.y < this.position.y;
+
+
+		if (condition && left != null) {
+			return left.FindNode(position);
+		} else if (right != null) {
+			return right.FindNode(position);
 		}
 
 		return null;
@@ -93,30 +103,29 @@ public class KDNode {
 
 	public IEnumerable<KDNode> GetNodes() {
 		if (left != null) {
-			foreach (var KDNode in left.GetNodes()) {
-				yield return KDNode;
+			foreach (var node in left.GetNodes()) {
+				yield return node;
 			}
 		}
 
 		yield return this;
 
 		if (right != null) {
-			foreach (var KDNode in right.GetNodes()) {
-				yield return KDNode;
+			foreach (var node in right.GetNodes()) {
+				yield return node;
 			}
 		}
 	}
-
 	public IEnumerable<KDNode> GetTrueNodes(float point) {
 		if (left != null) {
-			foreach (var KDNode in left.GetTrueNodes(point)) {
-				yield return KDNode;
+			foreach (var node in left.GetTrueNodes(point)) {
+				yield return node;
 			}
 		}
 
 		if (right != null) {
-			foreach (var KDNode in right.GetTrueNodes(point)) {
-				yield return KDNode;
+			foreach (var node in right.GetTrueNodes(point)) {
+				yield return node;
 			}
 		}
 
@@ -131,11 +140,9 @@ namespace Testing {
 	class Program {
 		public static void Main(string[] args) {
 			for (int i = 0; i < 10; i++) {
-				Task.Run(() => {
-					Console.WriteLine("Test " + (i) + " . . .");
-					Test();
-					Console.WriteLine("");
-				}).Wait();
+				Console.WriteLine("Test " + (i + 1) + " . . .");
+				Test();
+				Console.WriteLine("");
 			}
 		}
 
@@ -152,9 +159,9 @@ namespace Testing {
 
 
 			stopwatch1.Start();
-			for (int i = 0; i < 1500; i++) {
-				float min = random.NextSingle() * 1000f;
-				float max = min + random.NextSingle() * 1000f;
+			for (int i = 0; i < 15000; i++) {
+				float min = random.NextSingle() * 10f;
+				float max = min + random.NextSingle() * 10f;
 
 				if (tree == null) {
 					tree = new KDNode(new Vector2(min, max));
@@ -177,7 +184,6 @@ namespace Testing {
 
 				float point = random.NextSingle() * (_max - _min) + _min;
 
-				List<Vector2> list = new List<Vector2>();
 
 				stopwatch2.Start();
 				var minMax = tree.FindMinMaxScalar(point);
@@ -189,10 +195,13 @@ namespace Testing {
 						target = minMax.parent;
 					}
 
-					foreach (var KDNode in target.GetTrueNodes(point)) {
-						if (KDNode.position.x <= point && KDNode.position.y >= point) {
+					KDNode list = new KDNode(minMax.position);
+
+
+					foreach (var node in target.GetTrueNodes(point)) {
+						if (node.position.x <= point && node.position.y >= point) {
 							found++;
-							list.Add(KDNode.position);
+							list.Insert(node.position);
 						} else {
 							falseValues++;
 						}
@@ -206,11 +215,11 @@ namespace Testing {
 					Console.WriteLine("Time Searching: " + stopwatch2.ElapsedMilliseconds + "ms");
 					Console.WriteLine("Calculating...");
 
-					foreach (var KDNode in tree.GetNodes()) {
-						if (KDNode.position.x <= point && KDNode.position.y >= point) {
+					foreach (var node in tree.GetNodes()) {
+						if (node.position.x <= point && node.position.y >= point) {
 							trueValues++;
 
-							if (!list.Contains(KDNode.position)) {
+							if (list.FindNode(node.position) == null) {
 								missed++;
 							}
 						}
@@ -220,10 +229,10 @@ namespace Testing {
 					Console.WriteLine($"Failture: ({falseValues} / {number}) {(falseValues / number * 100f).ToString("0.00")}%");
 					Console.WriteLine($"Lost: ({missed} / {trueValues}) {(missed / trueValues * 100f).ToString("0.00")}%");
 				} else {
-					Console.WriteLine("No values found!");
 					stopwatch2.Stop();
 					Console.WriteLine("Time Inserting: " + stopwatch1.ElapsedMilliseconds + "ms");
 					Console.WriteLine("Time Searching: " + stopwatch2.ElapsedMilliseconds + "ms");
+					Console.WriteLine("No values found!");
 				}
 			}
 		}

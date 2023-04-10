@@ -15,13 +15,15 @@ public struct RangePair<TValue> {
 
 
 	public RangePair(float from, float to, TValue value) {
+		if (from > to) throw new System.ArgumentException("from must be less than or equal to to", nameof(from));
+
 		this.from = from;
 		this.to = to;
 		this.value = value;
 	}
 
 	public bool Contains(float key) {
-		return Comparer<float>.Default.Compare(from, key) <= 0 && Comparer<float>.Default.Compare(to, key) >= 0;
+		return from <= key && key <= to;
 	}
 
 	public override string ToString() {
@@ -38,8 +40,7 @@ public struct RangePair<TValue> {
 
 	public override bool Equals([NotNullWhen(true)] object? obj) {
 		if (obj is RangePair<TValue> other) {
-			return EqualityComparer<float>.Default.Equals(from, other.from)
-				&& EqualityComparer<float>.Default.Equals(to, other.to)
+			return from == other.from && to == other.to
 				&& EqualityComparer<TValue>.Default.Equals(value, other.value);
 		}
 

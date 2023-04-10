@@ -3,6 +3,7 @@
 
 	This interval tree is inspired on RangeTree by mbuchetics on GitHub (https://github.com/mbuchetics/RangeTree).
 */
+using System.Collections.Generic;
 
 
 public class IntervalTree<TValue> {
@@ -49,6 +50,14 @@ public class IntervalTree<TValue> {
 		if (_root != null) _root = null;
 
 		_root = new IntervalTree.Node<TValue>(_ranges);
+	}
+
+	public IEnumerable<RangePair<TValue>> Search(float key) {
+		if (_root == null) yield break;
+
+		foreach (RangePair<TValue> range in _root.Search(key)) {
+			yield return range;
+		}
 	}
 }
 

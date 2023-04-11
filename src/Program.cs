@@ -13,24 +13,26 @@ using System.Diagnostics;
 namespace Testing {
 	static class Program {
 		static readonly int tests = 100;
-		static readonly int totalRanges = 10000;
+		static readonly int totalRanges = 15000;
 
 
 		static void Main(string[] args) {
-			float success = 1f, best = 0f, worst = 1f;
+			float best = 0f, worst = 1f;
+			int totalSuccess = 0;
 
 			for (int i = 0; i < tests; i++) {
 				Console.WriteLine($"Test {i + 1}");
 
 				float result = Test();
-				success += result;
 				if (result > best) best = result;
 				if (result < worst) worst = result;
+
+				if (result == 1f) totalSuccess++;
 
 				Console.WriteLine("");
 			}
 
-			Console.WriteLine($"Success rate: {(success / (float)tests * 100f).ToString("0.00")}%");
+			Console.WriteLine($"Success rate: {((float)totalSuccess / (float)tests * 100f).ToString("0.00")}%");
 			Console.WriteLine($"Best: {(best * 100f).ToString("0.00")}%");
 			Console.WriteLine($"Worst: {(worst * 100f).ToString("0.00")}%");
 		}
@@ -49,7 +51,8 @@ namespace Testing {
 			int found = 0, expected = 0;
 
 
-			// Add 1000 random ranges to the tree
+			// Add some random ranges to the tree
+			buildWatch.Start();
 			for (int i = 0; i < totalRanges; i++) {
 				float min = random.NextSingle() * 1000f;
 				float max = min + random.NextSingle() * 1000f;
@@ -59,27 +62,25 @@ namespace Testing {
 				tree.Add(range);
 				if (range.Contains(key)) expected++;
 			}
-
-
-			// Build the tree and search for a random key
-			buildWatch.Start();
-			tree.Build();
 			buildWatch.Stop();
 
 
 			// Search for all ranges that contain the key
 			searchWatch.Start();
-			foreach (RangePair<int> range in tree.Search(key)) {
-				// Console.WriteLine(range);
-				// Do nothing...
-				found++;
-			}
+			IntervalTree.Node<int>? node = tree.Search(key);
 			searchWatch.Stop();
 
 
+			if (node != null) {
+				foreach (RangePair<int> range in node.GetAllThatContains(key)) {
+					found++;
+				}
+			}
+
+
 			// Print the results
-			Console.WriteLine($"Build time: {buildWatch.ElapsedMilliseconds}ms ({buildWatch.Elapsed.TotalNanoseconds} ns)");
-			Console.WriteLine($"Search time: {searchWatch.ElapsedMilliseconds}ms ({searchWatch.Elapsed.TotalNanoseconds} ns)");
+			Console.WriteLine($"Build time: {buildWatch.ElapsedMilliseconds}ms");
+			Console.WriteLine($"Search time: {searchWatch.ElapsedMilliseconds}ms");
 			Console.WriteLine($"Found {found} / {expected} ranges");
 
 			if (expected == 0) return 1f;

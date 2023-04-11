@@ -3,7 +3,6 @@
 
 	This interval tree is inspired on RangeTree by mbuchetics on GitHub (https://github.com/mbuchetics/RangeTree).
 */
-using System.Collections.Generic;
 
 
 
@@ -26,44 +25,90 @@ namespace IntervalTree {
 		}
 
 
-		public Node(List<RangePair<TValue>> ranges) {
-			if (ranges.Count == 0) return;
+		public Node(RangePair<TValue>[] ranges) {
+			if (ranges.Length == 0) return;
 
 			_range = ranges[0];
-			if (ranges.Count == 1) return;
-			ranges.Sort(IntervalTree<TValue>._comparer);
+			if (ranges.Length == 1) return;
 
+			int midIndex = ranges.Length / 2;
 
-			var mid = ranges[ranges.Count / 2];
+			RangePair<TValue> mid = ranges[midIndex];
+			RangePair<TValue>[] left = ranges[0..(midIndex - 1)];
+			RangePair<TValue>[] right = ranges[(midIndex + 1)..];
 
-			var left = ranges.GetRange(0, ranges.Count / 2);
-			var right = ranges.GetRange(ranges.Count / 2 + 1, ranges.Count / 2 - 1);
 
 			_range = mid;
 
-			if (left.Count > 0) _left = new Node<TValue>(left);
-			if (right.Count > 0) _right = new Node<TValue>(right);
+			if (left.Length > 0) _left = new Node<TValue>(left);
+			if (right.Length > 0) _right = new Node<TValue>(right);
 
 			_max = ranges.Max(range => range.to);
 		}
 
+		public void Add(RangePair<TValue> range) {
+			if (range.from < _range.from) {
+				if (_left == null) {
+					_left = new Node<TValue>(range);
+				} else {
+					_left.Add(range);
+				}
+			} else {
+				if (_right == null) {
+					_right = new Node<TValue>(range);
+				} else {
+					_right.Add(range);
+				}
+			}
 
-		/// <summary>
-		/// Searches for all ranges that contain the given key.
-		/// </summary>
-		public IEnumerable<RangePair<TValue>> Search(float key) {
+			_max = Math.Max(_max, range.to);
+		}
+
+
+
+		public IntervalTree.Node<TValue>? Search(float key) {
+			if (_range.Contains(key)) return this;
+
+			if (_left != null && key < _left._max) {
+				return _left.Search(key);
+			}
+
+			if (_right != null) {
+				return _right.Search(key);
+			}
+
+			return null;
+		}
+
+		public IEnumerable<RangePair<TValue>> GetAll() {
+			if (_left != null) {
+				foreach (RangePair<TValue> range in _left.GetAll()) {
+					yield return range;
+				}
+			}
+
+			yield return _range;
+
+			if (_right != null) {
+				foreach (RangePair<TValue> range in _right.GetAll()) {
+					yield return range;
+				}
+			}
+		}
+
+		public IEnumerable<RangePair<TValue>> GetAllThatContains(float key) {
 			if (_range.Contains(key)) {
 				yield return _range;
 			}
 
-			if (_left != null && _left._max >= key) {
-				foreach (RangePair<TValue> range in _left.Search(key)) {
+			if (_left != null) {
+				foreach (RangePair<TValue> range in _left.GetAllThatContains(key)) {
 					yield return range;
 				}
 			}
 
 			if (_right != null) {
-				foreach (RangePair<TValue> range in _right.Search(key)) {
+				foreach (RangePair<TValue> range in _right.GetAllThatContains(key)) {
 					yield return range;
 				}
 			}
